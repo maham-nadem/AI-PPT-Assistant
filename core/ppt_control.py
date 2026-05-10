@@ -1,9 +1,4 @@
-import pyautogui
 import keyboard
-import time
-
-pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0
 
 def control_ppt(gesture):
     if gesture == "next":
@@ -13,7 +8,6 @@ def control_ppt(gesture):
         keyboard.press_and_release("left")
         print("<< Prev Slide")
     elif gesture == "pointer":
-        print("☝️ Pointer Mode")
+        print("Pointer ON")
     elif gesture == "palm":
-        keyboard.press_and_release("escape")
-        print("✋ Palm - Stop")
+        print("Pointer OFF")

@@ -7,3 +7,4 @@ pygetwindow
 scikit-learn
 pandas
 matplotlib
+SpeechRecognition

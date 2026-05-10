@@ -6,9 +6,10 @@ from collections import deque
 
 model = None
 last_time = 0
-COOLDOWN = 1.2
+COOLDOWN = 1.5
 wrist_history = deque(maxlen=8)
 pointer_counter = 0
+palm_counter = 0
 
 def normalize(lmList):
     wrist_x = lmList[0][0]
@@ -30,23 +31,19 @@ def load_model():
         print("❌ Model nahi mila!")
 
 def is_palm_open(lmList):
-    """Check karo ke haath fully open hai"""
-    tip_ids = [8, 12, 16, 20]  # index, middle, ring, pinky tips
-    base_ids = [6, 10, 14, 18]  # unke bases
-    
-    fingers_up = 0
-    for tip, base in zip(tip_ids, base_ids):
-        if lmList[tip][1] < lmList[base][1]:  # tip base se upar hai
-            fingers_up += 1
-    
-    return fingers_up >= 4  # 4 ya zyada fingers up = palm
+    tip_ids  = [8, 12, 16, 20]
+    base_ids = [6, 10, 14, 18]
+    fingers_up = sum(1 for t, b in zip(tip_ids, base_ids)
+                     if lmList[t][1] < lmList[b][1])
+    return fingers_up >= 4
 
 def get_gesture(hands):
-    global last_time, pointer_counter
+    global last_time, pointer_counter, palm_counter
 
     if model is None or not hands:
         wrist_history.clear()
         pointer_counter = 0
+        palm_counter = 0
         return None
 
     lmList = hands[0]["lmList"]
@@ -56,28 +53,27 @@ def get_gesture(hands):
     wrist_x = lmList[0][0]
     wrist_history.append(wrist_x)
 
+    now = time.time()
+
+    # ── 1. PALM (4+ fingers up, haath still) ─────
+    if is_palm_open(lmList):
+        palm_counter += 1
+        pointer_counter = 0
+        if palm_counter == 20 and now - last_time > 2.0:
+            last_time = now
+            return "palm"
+        return None
+    else:
+        palm_counter = 0
+
+    # ── 2. POINTER (model prediction) ────────────
     features = np.array(normalize(lmList)).reshape(1, -1)
     prediction = model.predict(features)[0]
     confidence = model.predict_proba(features).max()
 
-    now = time.time()
-
-    # ── PALM CHECK ────────────────────────────────
-    if is_palm_open(lmList):
-        positions = list(wrist_history)
-        if len(positions) >= 4:
-            swing = max(positions) - min(positions)
-            if swing < 20:  # haath still hai
-                pointer_counter = 0
-                if now - last_time > COOLDOWN:
-                    last_time = now
-                    return "palm"
-        return None
-
-    # ── POINTER ───────────────────────────────────
-    if prediction == "pointer" and confidence > 0.95:
+    if prediction == "pointer" and confidence > 0.90:
         pointer_counter += 1
-        if pointer_counter >= 15 and now - last_time > COOLDOWN:
+        if pointer_counter >= 7 and now - last_time > COOLDOWN:
             last_time = now
             pointer_counter = 0
             return "pointer"
@@ -85,18 +81,17 @@ def get_gesture(hands):
     else:
         pointer_counter = 0
 
+    # ── 3. NEXT / PREV (movement) ─────────────────
     if now - last_time < COOLDOWN:
         return None
-
     if len(wrist_history) < 6:
         return None
 
-    # ── NEXT / PREV ───────────────────────────────
     positions = list(wrist_history)
-    total_swing = max(positions) - min(positions)
-    movement = positions[-1] - positions[0]
+    swing     = max(positions) - min(positions)
+    movement  = positions[-1] - positions[0]
 
-    if total_swing < 60:
+    if swing < 60:
         return None
 
     if movement < -40:
