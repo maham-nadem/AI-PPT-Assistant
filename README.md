@@ -6,8 +6,8 @@ Control PowerPoint presentations using hand gestures and ML!
 - ✅ Hand gesture control (ML-powered)
 - ✅ Next/Prev slide with hand swipe
 - ✅ Pointer mode with index finger
-- 🔜 Voice commands
-- 🔜 Air writing
+- ✅ Voice commands
+
 
 ## Gestures
 | Gesture | Action |
