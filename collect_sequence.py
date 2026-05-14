@@ -89,4 +89,4 @@ np.save("data/sequences/y.npy", np.array(all_labels))
 
 print(f"\n✅ Total sequences: {len(all_sequences)}")
 print(f"Shape: {np.array(all_sequences).shape}")
-print("Now train_lstm.py chalao!")
+print("Now run train_lstm.py !")
